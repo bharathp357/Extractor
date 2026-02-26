@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Command Center</title>
+    <style>
+        :root {
+            --bg-0: #111111;
+            --bg-1: #191919;
+            --bg-2: #222222;
+            --bg-3: #2a2a2a;
+            --border: #333333;
+            --border-light: #3d3d3d;
+            --text-1: #ececec;
+            --text-2: #a0a0a0;
+            --text-3: #6b6b6b;
+            --accent: #4f8ff7;
+            --google: #4285f4;
+            --gemini: #8e44ef;
+            --chatgpt: #10a37f;
+            --red: #e5534b;
+            --green: #3fb950;
+            --orange: #d29922;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg-0);
+            color: var(--text-1);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* ── Sidebar ── */
+        .sidebar {
+            width: 240px;
+            background: var(--bg-1);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .sidebar-brand {
+            padding: 16px 16px 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sidebar-brand h1 {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-1);
+            letter-spacing: -0.2px;
+        }
+
+        .sidebar-brand .subtitle {
+            font-size: 11px;
+            color: var(--text-3);
+            margin-top: 2px;
+        }
+
+        .sidebar-section-label {
+            padding: 14px 16px 6px;
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text-3);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .sidebar-nav {
+            padding: 4px 8px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            color: var(--text-2);
+            cursor: pointer;
+            transition: all 0.12s;
+            border: 1px solid transparent;
+        }
+
+        .nav-item:hover { background: var(--bg-2); color: var(--text-1); }
+
+        .nav-item.active {
+            background: var(--bg-3);
+            color: var(--text-1);
+            border-color: var(--border-light);
+        }
+
+        .nav-item .nav-dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: var(--text-3);
+            flex-shrink: 0;
+        }
+
+        .nav-item .nav-dot.live { background: var(--green); }
+        .nav-item .nav-dot.warn { background: var(--orange); }
+
+        .nav-item[data-provider="google"].active { border-left: 2px solid var(--google); }
+        .nav-item[data-provider="gemini"].active { border-left: 2px solid var(--gemini); }
+        .nav-item[data-provider="chatgpt"].active { border-left: 2px solid var(--chatgpt); }
+
+        /* History section */
+        .sidebar-history {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 8px 8px;
+        }
+
+        .history-entry {
+            padding: 7px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.12s;
+            margin-bottom: 1px;
+        }
+
+        .history-entry:hover { background: var(--bg-2); }
+
+        .history-entry .h-title {
+            font-size: 12px;
+            color: var(--text-2);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .history-entry .h-meta {
+            font-size: 10px;
+            color: var(--text-3);
+            margin-top: 1px;
+        }
+
+        .history-entry .h-delete {
+            float: right;
+            background: none;
+            border: none;
+            color: var(--text-3);
+            cursor: pointer;
+            font-size: 11px;
+            opacity: 0;
+            transition: opacity 0.12s;
+            padding: 0 2px;
+        }
+
+        .history-entry:hover .h-delete { opacity: 1; }
+        .history-entry .h-delete:hover { color: var(--red); }
+
+        .sidebar-empty {
+            padding: 12px 16px;
+            font-size: 11px;
+            color: var(--text-3);
+            text-align: center;
+        }
+
+        /* ── Main Panel ── */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Tab bar */
+        .tab-bar {
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            height: 42px;
+            background: var(--bg-1);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            gap: 2px;
+        }
+
+        .tab {
+            padding: 6px 16px;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-3);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.12s;
+            line-height: 28px;
+        }
+
+        .tab:hover { color: var(--text-2); }
+        .tab.active { color: var(--text-1); }
+        .tab[data-provider="google"].active { border-bottom-color: var(--google); color: var(--google); }
+        .tab[data-provider="gemini"].active { border-bottom-color: var(--gemini); color: var(--gemini); }
+        .tab[data-provider="chatgpt"].active { border-bottom-color: var(--chatgpt); color: var(--chatgpt); }
+
+        .tab-actions {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tab-btn {
+            padding: 4px 12px;
+            font-size: 11px;
+            color: var(--text-3);
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.12s;
+        }
+
+        .tab-btn:hover { color: var(--text-2); border-color: var(--border-light); background: var(--bg-2); }
+
+        /* ── Chat Panels ── */
+        .chat-panel {
+            flex: 1;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-panel.active { display: flex; }
+
+        /* Messages area */
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 0;
+        }
+
+        .messages-inner {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Welcome state */
+        .welcome-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 300px;
+            color: var(--text-3);
+            text-align: center;
+            padding: 60px 24px;
+        }
+
+        .welcome-state h2 {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-2);
+            margin-bottom: 6px;
+        }
+
+        .welcome-state p {
+            font-size: 13px;
+            line-height: 1.5;
+            max-width: 360px;
+        }
+
+        /* Message blocks */
+        .msg-block { margin-bottom: 24px; }
+        .msg-block:last-child { margin-bottom: 0; }
+
+        .msg-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-3);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .msg-label.user-label { color: var(--text-2); }
+
+        .msg-content {
+            font-size: 14px;
+            line-height: 1.7;
+            color: var(--text-1);
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .msg-content.user-content {
+            padding: 10px 14px;
+            background: var(--bg-2);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .msg-content.ai-content { padding: 10px 0 0; }
+        .msg-content.error-content { color: var(--red); font-size: 13px; }
+
+        .msg-meta {
+            margin-top: 4px;
+            font-size: 10px;
+            color: var(--text-3);
+        }
+
+        /* Loading */
+        .msg-loading {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+
+        .msg-loading .dots {
+            display: flex;
+            gap: 3px;
+        }
+
+        .msg-loading .dots span {
+            width: 5px; height: 5px;
+            border-radius: 50%;
+            background: var(--text-3);
+            animation: loadPulse 1.2s ease-in-out infinite;
+        }
+
+        .msg-loading .dots span:nth-child(2) { animation-delay: 0.15s; }
+        .msg-loading .dots span:nth-child(3) { animation-delay: 0.3s; }
+
+        .msg-loading .load-text { font-size: 12px; color: var(--text-3); }
+
+        @keyframes loadPulse {
+            0%, 100% { opacity: 0.25; }
+            50% { opacity: 1; }
+        }
+
+        /* ── Input Area ── */
+        .input-area {
+            padding: 12px 24px 16px;
+            flex-shrink: 0;
+        }
+
+        .input-wrap {
+            max-width: 720px;
+            margin: 0 auto;
+        }
+
+        .input-box {
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+            background: var(--bg-2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 4px;
+            transition: border-color 0.15s;
+        }
+
+        .input-box:focus-within { border-color: var(--border-light); }
+
+        .input-box textarea {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-1);
+            font-size: 14px;
+            font-family: inherit;
+            padding: 8px 10px;
+            resize: none;
+            min-height: 38px;
+            max-height: 140px;
+            outline: none;
+            line-height: 1.5;
+        }
+
+        .input-box textarea::placeholder { color: var(--text-3); }
+
+        .send-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.12s;
+            flex-shrink: 0;
+            color: #fff;
+        }
+
+        .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .send-btn svg { width: 16px; height: 16px; }
+
+        .send-btn[data-provider="google"] { background: var(--google); }
+        .send-btn[data-provider="gemini"] { background: var(--gemini); }
+        .send-btn[data-provider="chatgpt"] { background: var(--chatgpt); }
+
+        .input-hint {
+            text-align: center;
+            font-size: 10px;
+            color: var(--text-3);
+            margin-top: 6px;
+        }
+
+        /* ── Modal ── */
+        .modal-bg {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.65);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-bg.open { display: flex; }
+
+        .modal-box {
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            width: 640px;
+            max-height: 75vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-top {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-3);
+            cursor: pointer;
+            font-size: 16px;
+            padding: 2px 6px;
+        }
+
+        .modal-close:hover { color: var(--text-1); }
+
+        .modal-content {
+            padding: 16px;
+            overflow-y: auto;
+            font-size: 13px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            font-family: 'Consolas', 'Cascadia Code', monospace;
+            color: var(--text-2);
+        }
+
+        /* ── Toast ── */
+        .toast {
+            position: fixed;
+            bottom: 16px;
+            right: 16px;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            z-index: 200;
+            transform: translateY(60px);
+            opacity: 0;
+            transition: all 0.25s;
+            background: var(--bg-2);
+            border: 1px solid var(--border);
+            color: var(--text-2);
+        }
+
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast.ok { border-color: var(--green); color: var(--green); }
+        .toast.err { border-color: var(--red); color: var(--red); }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--bg-3); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--border); }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-brand">
+            <h1>AI Command Center</h1>
+            <div class="subtitle">Multi-provider unified interface</div>
+        </div>
+
+        <div class="sidebar-section-label">Providers</div>
+        <div class="sidebar-nav">
+            <div class="nav-item active" data-provider="google" onclick="switchProvider('google')">
+                <span class="nav-dot" id="dot-google"></span>
+                <span>Google AI Mode</span>
+            </div>
+            <div class="nav-item" data-provider="gemini" onclick="switchProvider('gemini')">
+                <span class="nav-dot" id="dot-gemini"></span>
+                <span>Gemini Pro</span>
+            </div>
+            <div class="nav-item" data-provider="chatgpt" onclick="switchProvider('chatgpt')">
+                <span class="nav-dot" id="dot-chatgpt"></span>
+                <span>ChatGPT</span>
+            </div>
+        </div>
+
+        <div class="sidebar-section-label">AI Mode History</div>
+        <div class="sidebar-history" id="historyList">
+            <div class="sidebar-empty">No conversations yet</div>
+        </div>
+    </div>
+
+    <!-- Main -->
+    <div class="main">
+        <!-- Tab Bar -->
+        <div class="tab-bar">
+            <div class="tab active" data-provider="google" onclick="switchProvider('google')">AI Mode</div>
+            <div class="tab" data-provider="gemini" onclick="switchProvider('gemini')">Gemini</div>
+            <div class="tab" data-provider="chatgpt" onclick="switchProvider('chatgpt')">ChatGPT</div>
+            <div class="tab-actions">
+                <button class="tab-btn" onclick="newConversation()">New chat</button>
+                <button class="tab-btn" onclick="clearChat()">Clear</button>
+                <button class="tab-btn" onclick="reconnect()">Reconnect</button>
+            </div>
+        </div>
+
+        <!-- Chat Panel: Google AI Mode -->
+        <div class="chat-panel active" id="panel-google">
+            <div class="messages" id="scroll-google">
+                <div class="messages-inner" id="msgs-google">
+                    <div class="welcome-state" id="welcome-google">
+                        <h2>Google AI Mode</h2>
+                        <p>Search-powered AI responses. Type a query below to start.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="input-area">
+                <div class="input-wrap">
+                    <div class="input-box">
+                        <textarea id="input-google" placeholder="Ask AI Mode..." rows="1"
+                            oninput="autoGrow(this)" onkeydown="onKey(event, 'google')"></textarea>
+                        <button class="send-btn" data-provider="google" id="send-google" onclick="send('google')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                        </button>
+                    </div>
+                    <div class="input-hint">Enter to send, Shift+Enter for new line</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Panel: Gemini -->
+        <div class="chat-panel" id="panel-gemini">
+            <div class="messages" id="scroll-gemini">
+                <div class="messages-inner" id="msgs-gemini">
+                    <div class="welcome-state" id="welcome-gemini">
+                        <h2>Gemini Pro</h2>
+                        <p>Deep reasoning and research. Conversation continues in the same Gemini chat.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="input-area">
+                <div class="input-wrap">
+                    <div class="input-box">
+                        <textarea id="input-gemini" placeholder="Ask Gemini..." rows="1"
+                            oninput="autoGrow(this)" onkeydown="onKey(event, 'gemini')"></textarea>
+                        <button class="send-btn" data-provider="gemini" id="send-gemini" onclick="send('gemini')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                        </button>
+                    </div>
+                    <div class="input-hint">Enter to send, Shift+Enter for new line</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Panel: ChatGPT -->
+        <div class="chat-panel" id="panel-chatgpt">
+            <div class="messages" id="scroll-chatgpt">
+                <div class="messages-inner" id="msgs-chatgpt">
+                    <div class="welcome-state" id="welcome-chatgpt">
+                        <h2>ChatGPT</h2>
+                        <p>Planning and analysis. Conversation continues in the same ChatGPT chat.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="input-area">
+                <div class="input-wrap">
+                    <div class="input-box">
+                        <textarea id="input-chatgpt" placeholder="Ask ChatGPT..." rows="1"
+                            oninput="autoGrow(this)" onkeydown="onKey(event, 'chatgpt')"></textarea>
+                        <button class="send-btn" data-provider="chatgpt" id="send-chatgpt" onclick="send('chatgpt')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                        </button>
+                    </div>
+                    <div class="input-hint">Enter to send, Shift+Enter for new line</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal-bg" id="modalBg" onclick="if(event.target===this)this.classList.remove('open')">
+        <div class="modal-box">
+            <div class="modal-top">
+                <span id="modalTitle">Conversation</span>
+                <button class="modal-close" onclick="document.getElementById('modalBg').classList.remove('open')">x</button>
+            </div>
+            <div class="modal-content" id="modalBody"></div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ── State ──
+        let active = 'google';
+        const sending = { google: false, gemini: false, chatgpt: false };
+
+        const LABELS = {
+            google: 'AI Mode',
+            gemini: 'Gemini',
+            chatgpt: 'ChatGPT',
+        };
+
+        // ── Init ──
+        window.addEventListener('load', () => {
+            pollStatus();
+            loadHistory();
+            setInterval(pollStatus, 15000);
+            document.getElementById('input-google').focus();
+        });
+
+        // ── Provider switch ──
+        function switchProvider(name) {
+            active = name;
+            document.querySelectorAll('.nav-item').forEach(n =>
+                n.classList.toggle('active', n.dataset.provider === name));
+            document.querySelectorAll('.tab[data-provider]').forEach(t =>
+                t.classList.toggle('active', t.dataset.provider === name));
+            document.querySelectorAll('.chat-panel').forEach(p =>
+                p.classList.toggle('active', p.id === `panel-${name}`));
+            document.getElementById(`input-${name}`).focus();
+        }
+
+        // ── Auto-grow textarea ──
+        function autoGrow(el) {
+            el.style.height = 'auto';
+            el.style.height = Math.min(el.scrollHeight, 140) + 'px';
+        }
+
+        // ── Keyboard ──
+        function onKey(e, provider) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                send(provider);
+            }
+        }
+
+        // ── Send ──
+        async function send(provider) {
+            const input = document.getElementById(`input-${provider}`);
+            const prompt = input.value.trim();
+            if (!prompt || sending[provider]) return;
+
+            sending[provider] = true;
+            const btn = document.getElementById(`send-${provider}`);
+            btn.disabled = true;
+
+            const welcome = document.getElementById(`welcome-${provider}`);
+            if (welcome) welcome.style.display = 'none';
+
+            appendMsg(provider, prompt, 'user');
+            input.value = '';
+            input.style.height = 'auto';
+
+            const loader = appendLoading(provider);
+
+            try {
+                const res = await fetch('/api/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt, provider })
+                });
+                const data = await res.json();
+                loader.remove();
+
+                if (data.success) {
+                    const ms = data.timing ? data.timing.total_ms + 'ms' : '';
+                    appendMsg(provider, data.response, 'ai', ms);
+                } else {
+                    appendMsg(provider, data.response || 'Failed to get response', 'error');
+                }
+            } catch (err) {
+                loader.remove();
+                appendMsg(provider, 'Connection error: ' + err.message, 'error');
+            }
+
+            sending[provider] = false;
+            btn.disabled = false;
+            input.focus();
+
+            if (provider === 'google') loadHistory();
+        }
+
+        // ── Append message ──
+        function appendMsg(provider, text, type, timing) {
+            const container = document.getElementById(`msgs-${provider}`);
+            const block = document.createElement('div');
+            block.className = 'msg-block';
+
+            let label = '', contentClass = '';
+            if (type === 'user') {
+                label = '<div class="msg-label user-label">You</div>';
+                contentClass = 'user-content';
+            } else if (type === 'ai') {
+                label = `<div class="msg-label">${LABELS[provider]}</div>`;
+                contentClass = 'ai-content';
+            } else {
+                label = '<div class="msg-label" style="color:var(--red)">Error</div>';
+                contentClass = 'error-content';
+            }
+
+            let meta = timing ? `<div class="msg-meta">${timing}</div>` : '';
+            block.innerHTML = label +
+                `<div class="msg-content ${contentClass}">${esc(text)}</div>` + meta;
+
+            container.appendChild(block);
+            document.getElementById(`scroll-${provider}`).scrollTop =
+                document.getElementById(`scroll-${provider}`).scrollHeight;
+        }
+
+        // ── Loading indicator ──
+        function appendLoading(provider) {
+            const container = document.getElementById(`msgs-${provider}`);
+            const el = document.createElement('div');
+            el.className = 'msg-loading';
+            el.innerHTML = `
+                <div class="dots"><span></span><span></span><span></span></div>
+                <span class="load-text">Waiting for ${LABELS[provider]}...</span>
+            `;
+            container.appendChild(el);
+            document.getElementById(`scroll-${provider}`).scrollTop =
+                document.getElementById(`scroll-${provider}`).scrollHeight;
+            return el;
+        }
+
+        // ── Status polling ──
+        async function pollStatus() {
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+                for (const [name, st] of Object.entries(data)) {
+                    const dot = document.getElementById(`dot-${name}`);
+                    if (!dot) continue;
+                    dot.classList.remove('live', 'warn');
+                    if (st.connected) {
+                        if (st.requires_login && !st.logged_in) dot.classList.add('warn');
+                        else dot.classList.add('live');
+                    }
+                }
+            } catch {
+                document.querySelectorAll('.nav-dot').forEach(d => d.classList.remove('live', 'warn'));
+            }
+        }
+
+        // ── New conversation ──
+        async function newConversation() {
+            try {
+                await fetch('/api/new-conversation', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ provider: active })
+                });
+                toast(`New ${LABELS[active]} conversation started`, 'ok');
+            } catch { toast('Failed', 'err'); }
+        }
+
+        // ── Clear chat ──
+        function clearChat() {
+            const container = document.getElementById(`msgs-${active}`);
+            container.innerHTML = `
+                <div class="welcome-state" id="welcome-${active}">
+                    <h2>${LABELS[active]}</h2>
+                    <p>Start a new conversation below.</p>
+                </div>
+            `;
+        }
+
+        // ── Reconnect ──
+        async function reconnect() {
+            try {
+                await fetch('/api/reconnect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ provider: active })
+                });
+                pollStatus();
+                toast(`Reconnecting ${LABELS[active]}...`, 'ok');
+            } catch { toast('Server unreachable', 'err'); }
+        }
+
+        // ── History (AI Mode only) ──
+        async function loadHistory() {
+            try {
+                const res = await fetch('/api/history');
+                const files = await res.json();
+                const list = document.getElementById('historyList');
+
+                if (!files.length) {
+                    list.innerHTML = '<div class="sidebar-empty">No conversations yet</div>';
+                    return;
+                }
+
+                list.innerHTML = files.map(f => `
+                    <div class="history-entry" onclick="viewHistory('${f.filename}')">
+                        <button class="h-delete" onclick="event.stopPropagation();deleteHistory('${f.filename}')">x</button>
+                        <div class="h-title">${f.filename.replace('.txt','').replace(/_/g,' ')}</div>
+                        <div class="h-meta">${f.modified}</div>
+                    </div>
+                `).join('');
+            } catch {
+                document.getElementById('historyList').innerHTML =
+                    '<div class="sidebar-empty" style="color:var(--red)">Failed to load</div>';
+            }
+        }
+
+        async function viewHistory(filename) {
+            try {
+                const res = await fetch(`/api/history/${filename}`);
+                const data = await res.json();
+                document.getElementById('modalTitle').textContent =
+                    filename.replace(/_/g,' ').replace('.txt','');
+                document.getElementById('modalBody').textContent = data.content;
+                document.getElementById('modalBg').classList.add('open');
+            } catch { toast('Failed to load', 'err'); }
+        }
+
+        async function deleteHistory(filename) {
+            try {
+                await fetch(`/api/history/${filename}`, { method: 'DELETE' });
+                loadHistory();
+            } catch { toast('Failed to delete', 'err'); }
+        }
+
+        // ── Toast ──
+        function toast(msg, type) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = `toast ${type || ''} show`;
+            setTimeout(() => t.classList.remove('show'), 2500);
+        }
+
+        // ── Helpers ──
+        function esc(text) {
+            const d = document.createElement('div');
+            d.textContent = text;
+            return d.innerHTML;
+        }
+    </script>
+</body>
+</html>

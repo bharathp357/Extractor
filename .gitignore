@@ -1,0 +1,36 @@
+# Virtual environments
+.venv/
+.venv-1/
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# Chrome profile (contains cookies/sessions — never commit)
+ai_cmd_profile/
+chrome_profile/
+
+# Saved conversations (user data)
+conversations/
+
+# Debug/diagnostic output
+debug_*.json
+debug_*.html
+debug_*.txt
+
+# Chat state
+.chat_urls.json
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Misc
+*.log
