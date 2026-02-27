@@ -1,0 +1,409 @@
+{
+  "timestamp": "2026-02-27 14:58:49",
+  "provider": "google",
+  "tests": {
+    "burst_0s": {
+      "total": 15,
+      "success": 15,
+      "failed": 0,
+      "blocked": 0,
+      "total_ms": 66841,
+      "qps": 0.22,
+      "avg_ms": 4455,
+      "min_ms": 1763,
+      "max_ms": 30830,
+      "avg_chars": 1591
+    },
+    "paced_2s": {
+      "total": 10,
+      "success": 10,
+      "failed": 0,
+      "blocked": 0,
+      "total_ms": 44038,
+      "qps": 0.23,
+      "avg_ms": 2602,
+      "min_ms": 2274,
+      "max_ms": 3118,
+      "avg_chars": 1723
+    },
+    "safe_4s": {
+      "total": 10,
+      "success": 10,
+      "failed": 0,
+      "blocked": 0,
+      "total_ms": 61838,
+      "qps": 0.16,
+      "avg_ms": 2582,
+      "min_ms": 2072,
+      "max_ms": 4170,
+      "avg_chars": 1766
+    }
+  },
+  "all_results": [
+    {
+      "test": "burst_0s",
+      "results": [
+        {
+          "success": true,
+          "prompt": "What is Python?",
+          "response_len": 2491,
+          "total_ms": 2411,
+          "scrape_ms": 2369,
+          "overhead_ms": 2,
+          "error": null,
+          "blocked": false
+        },
+        {
+          "success": true,
+          "prompt": "Explain Docker in one line",
+          "response_len": 1126,
+          "total_ms": 3417,
+          "scrape_ms": 3404,
+          "overhead_ms": 0,
+          "error": null,
+          "blocked": false
+        },
+        {
+          "success": true,
+          "prompt": "What is AWS Lambda?",
+          "response_len": 2609,
+          "total_ms": 2206,
+          "scrape_ms": 2190,
+          "overhead_ms": 1,
+          "error": null,
+          "blocked": false
+        },
+        {
+          "success": true,
+          "prompt": "How does Git work?",
+          "response_len": 271,
+          "total_ms": 2516,
+          "scrape_ms": 2494,
+          "overhead_ms": 0,
+          "error": null,
+          "blocked": false
+        },
+        {
+          "success": true,
+          "prompt": "What is REST API?",
+          "response_len": 2645,
+          "total_ms": 2565,
+          "scrape_ms": 1898,
+          "overhead_ms": 1,
+          "error": null,
+          "blocked": false
+        },
+        {
+          "success": true,
+          "prompt": "Define machine learning",
+          "response_len": 3498,
+          "total_ms": 2137,
+          "scrape_ms": 2112,
+          "overhead_ms": 0,
+          "error": null,
+          "blocked": false
+        },
+        {
+          "success": true,
+          "prompt": "What is Kubernetes?",
+          "response_len": 3243,
+          "total_ms": 2304,
+          "scrape_ms": 2269,
+          "overhead_ms": 1,
+          "error": null,
+          "blocked": false
+        },
+        {
+          "success": true,
+          "prompt": "Explain TCP/IP briefly",
+          "response_len": 306,
+          "total_ms": 2693,
+          "scrape_ms": 2677,
+          "overhead_ms": 0,
+          "error": null,
+          "blocked": false
+        },
+        {
+          "success": true,
+          "prompt": "What is a hash table?",
+          "response_len": 339,
+          "total_ms": 1763,
+          "scrape_ms": 1751,
+          "overhead_ms": 0,
+          "error": null,
+          "blocked": false
+        },
+        {
+          "success": true,
+          "prompt": "Define recursion",
+          "response_len": 206,
+          "total_ms": 2608,
+          "scrape_ms": 2596,
+          "overhead_ms": 1,
+          "error": null,
+          "blocked": false
+        },
+        {
+          "success": true,
+          "prompt": "What is CI/CD?",
+          "response_len": 31,
+          "total_ms": 30830,
+          "scrape_ms": 30816,
+          "overhead_ms": 0,
+          "error": null,
+          "blocked": false
+        },
+        {
+          "success": true,
+          "prompt": "Explain OAuth2",
+          "response_len": 360,
+          "total_ms": 3440,
+          "scrape_ms": 3408,
+          "overhead_ms": 0,
+          "error": null,
+          "blocked": false
+        },
+        {
+          "success": true,
+          "prompt": "What is WebSocket?",
+          "response_len": 3040,
+          "total_ms": 2075,
+          "scrape_ms": 2052,
+          "overhead_ms": 0,
+          "error": null,
+          "blocked": false
+        },
+        {
+          "success": true,
+          "prompt": "Define microservices",
+          "response_len": 373,
+          "total_ms": 3338,
+          "scrape_ms": 3314,
+          "overhead_ms": 0,
+          "error": null,
+          "blocked": false
+        },
+        {
+          "success": true,
+          "prompt": "What is SQL injection?",
+          "response_len": 3331,
+          "total_ms": 2520,
+          "scrape_ms": 2494,
+          "overhead_ms": 0,
+          "error": null,
+          "blocked": false
+        }
+      ]
+    },
+    {
+      "test": "paced_2s",
+      "results": [
+        {
+          "success": true,
+          "prompt": "What is Python?",
+          "response_len": 2491,
+          "total_ms": 2363,
+          "scrape_ms": 2354,
+          "overhead_ms": 0,
+          "error": null,
+          "blocked": false
+        },
+        {
+          "success": true,
+          "prompt": "Explain Docker in one line",
+          "response_len": 168,
+          "total_ms": 2577,
+          "scrape_ms": 2545,
+          "overhead_ms": 0,
+          "error": null,
+          "blocked": false
+        },
+        {
+          "success": true,
+          "prompt": "What is AWS Lambda?",
+          "response_len": 2609,
+          "total_ms": 2577,
+          "scrape_ms": 2539,
+          "overhead_ms": 0,
+          "error": null,
+          "blocked": false
+        },
+        {
+          "success": true,
+          "prompt": "How does Git work?",
+          "response_len": 259,
+          "total_ms": 3118,
+          "scrape_ms": 3092,
+          "overhead_ms": 0,
+          "error": null,
+          "blocked": false
+        },
+        {
+          "success": true,
+          "prompt": "What is REST API?",
+          "response_len": 2645,
+          "total_ms": 2303,
+          "scrape_ms": 2290,
+          "overhead_ms": 0,
+          "error": null,
+          "blocked": false
+        },
+        {
+          "success": true,
+          "prompt": "Define machine learning",
+          "response_len": 3498,
+          "total_ms": 2274,
+          "scrape_ms": 2262,
+          "overhead_ms": 0,
+          "error": null,
+          "blocked": false
+        },
+        {
+          "success": true,
+          "prompt": "What is Kubernetes?",
+          "response_len": 3243,
+          "total_ms": 2392,
+          "scrape_ms": 2363,
+          "overhead_ms": 0,
+          "error": null,
+          "blocked": false
+        },
+        {
+          "success": true,
+          "prompt": "Explain TCP/IP briefly",
+          "response_len": 182,
+          "total_ms": 2984,
+          "scrape_ms": 2951,
+          "overhead_ms": 0,
+          "error": null,
+          "blocked": false
+        },
+        {
+          "success": true,
+          "prompt": "What is a hash table?",
+          "response_len": 1738,
+          "total_ms": 2990,
+          "scrape_ms": 2966,
+          "overhead_ms": 0,
+          "error": null,
+          "blocked": false
+        },
+        {
+          "success": true,
+          "prompt": "Define recursion",
+          "response_len": 396,
+          "total_ms": 2438,
+          "scrape_ms": 2407,
+          "overhead_ms": 0,
+          "error": null,
+          "blocked": false
+        }
+      ]
+    },
+    {
+      "test": "safe_4s",
+      "results": [
+        {
+          "success": true,
+          "prompt": "What is Python?",
+          "response_len": 2491,
+          "total_ms": 2238,
+          "scrape_ms": 2212,
+          "overhead_ms": 0,
+          "error": null,
+          "blocked": false
+        },
+        {
+          "success": true,
+          "prompt": "Explain Docker in one line",
+          "response_len": 960,
+          "total_ms": 2953,
+          "scrape_ms": 2913,
+          "overhead_ms": 0,
+          "error": null,
+          "blocked": false
+        },
+        {
+          "success": true,
+          "prompt": "What is AWS Lambda?",
+          "response_len": 2609,
+          "total_ms": 2072,
+          "scrape_ms": 2049,
+          "overhead_ms": 0,
+          "error": null,
+          "blocked": false
+        },
+        {
+          "success": true,
+          "prompt": "How does Git work?",
+          "response_len": 152,
+          "total_ms": 2687,
+          "scrape_ms": 2661,
+          "overhead_ms": 1,
+          "error": null,
+          "blocked": false
+        },
+        {
+          "success": true,
+          "prompt": "What is REST API?",
+          "response_len": 2645,
+          "total_ms": 2166,
+          "scrape_ms": 2156,
+          "overhead_ms": 0,
+          "error": null,
+          "blocked": false
+        },
+        {
+          "success": true,
+          "prompt": "Define machine learning",
+          "response_len": 3498,
+          "total_ms": 2193,
+          "scrape_ms": 2147,
+          "overhead_ms": 0,
+          "error": null,
+          "blocked": false
+        },
+        {
+          "success": true,
+          "prompt": "What is Kubernetes?",
+          "response_len": 3243,
+          "total_ms": 2301,
+          "scrape_ms": 2244,
+          "overhead_ms": 0,
+          "error": null,
+          "blocked": false
+        },
+        {
+          "success": true,
+          "prompt": "Explain TCP/IP briefly",
+          "response_len": 306,
+          "total_ms": 2622,
+          "scrape_ms": 2612,
+          "overhead_ms": 0,
+          "error": null,
+          "blocked": false
+        },
+        {
+          "success": true,
+          "prompt": "What is a hash table?",
+          "response_len": 1473,
+          "total_ms": 4170,
+          "scrape_ms": 4149,
+          "overhead_ms": 0,
+          "error": null,
+          "blocked": false
+        },
+        {
+          "success": true,
+          "prompt": "Define recursion",
+          "response_len": 287,
+          "total_ms": 2420,
+          "scrape_ms": 2400,
+          "overhead_ms": 1,
+          "error": null,
+          "blocked": false
+        }
+      ]
+    }
+  ]
+}
