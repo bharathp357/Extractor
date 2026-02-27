@@ -34,3 +34,7 @@ Thumbs.db
 
 # Misc
 *.log
+
+# Node / React
+frontend/node_modules/
+frontend/dist/

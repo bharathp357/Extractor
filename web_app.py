@@ -1,14 +1,19 @@
 """
 Flask Web Application — AI Command Center.
 Multi-provider Web UI: routes queries to Google AI Mode, Gemini Pro, or ChatGPT.
+Serves React frontend from static/react/ build output.
 """
+import os
 import threading
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 from providers import get_automator, get_all_statuses, get_available_providers, preload_all, get_preload_status
 from storage import get_storage
 import config
 
-app = Flask(__name__)
+# React build directory
+REACT_BUILD = os.path.join(os.path.dirname(__file__), "static", "react")
+
+app = Flask(__name__, static_folder=REACT_BUILD, static_url_path="")
 
 # Session state (in-memory, per-server-run)
 session_conversations = []
@@ -19,6 +24,10 @@ session_lock = threading.Lock()
 
 @app.route("/")
 def index():
+    """Serve React SPA; fallback to old template if build missing."""
+    react_index = os.path.join(REACT_BUILD, "index.html")
+    if os.path.exists(react_index):
+        return send_from_directory(REACT_BUILD, "index.html")
     return render_template("index.html")
 
 
