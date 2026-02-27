@@ -10,7 +10,7 @@ import json
 import threading
 import time as _time
 from providers.base import BaseAutomator
-from providers.browser_manager import get_browser_manager, BrowserManager
+from providers.browser_manager import get_browser_manager, reset_browser_manager, BrowserManager
 import config
 
 
@@ -92,7 +92,11 @@ def close_all():
         except Exception:
             pass
     _automators.clear()
-    get_browser_manager().close_all()
+    try:
+        get_browser_manager().close_all()
+    except Exception:
+        pass
+    reset_browser_manager()
 
 
 def _get_display_name(provider: str) -> str:
@@ -141,9 +145,17 @@ def preload_all():
     t_start = _time.perf_counter()
 
     try:
-        # Step 1: Launch browser
+        # Step 1: Launch browser (auto-kills stale processes if needed)
         t_browser = _time.perf_counter()
         bm = get_browser_manager()
+
+        # Safety check: if browser is dead from a prior run, reset and retry
+        if not bm.is_alive():
+            print("[preload] Browser not alive — resetting...")
+            reset_browser_manager()
+            _automators.clear()
+            bm = get_browser_manager()
+
         browser_ms = round((_time.perf_counter() - t_browser) * 1000)
         print(f"[preload] Browser launched in {browser_ms}ms")
 

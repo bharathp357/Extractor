@@ -7,15 +7,71 @@ Design:
   - switch_to(provider) activates the correct tab before any interaction
   - Single threading.Lock serialises all driver access across providers
   - Stealth CDP patches applied once at launch, inherited by all tabs
+  - Auto-kills stale Chrome/ChromeDriver on startup to prevent profile locks
 """
 import os
 import time
+import subprocess
 import threading
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.edge.options import Options as EdgeOptions
 from selenium.common.exceptions import WebDriverException
 import config
+
+
+def _kill_stale_browser_processes():
+    """
+    Kill leftover chrome.exe and chromedriver.exe from previous runs.
+    Only kills processes using OUR profile directory to avoid killing
+    the user's normal Chrome windows.
+    """
+    profile_dir = os.path.normpath(config.CHROME_PROFILE_DIR).lower() if config.CHROME_PROFILE_DIR else None
+    killed_chrome = 0
+    killed_driver = 0
+
+    try:
+        # Kill chromedriver.exe (always safe — user doesn't run chromedriver manually)
+        result = subprocess.run(
+            ["taskkill", "/F", "/IM", "chromedriver.exe"],
+            capture_output=True, text=True, timeout=5
+        )
+        if result.returncode == 0:
+            killed_driver = result.stdout.count("SUCCESS")
+    except Exception:
+        pass
+
+    # Kill Chrome processes using our profile directory
+    if profile_dir:
+        try:
+            result = subprocess.run(
+                ["wmic", "process", "where", "name='chrome.exe'", "get",
+                 "ProcessId,CommandLine", "/FORMAT:CSV"],
+                capture_output=True, text=True, timeout=10
+            )
+            for line in result.stdout.strip().splitlines():
+                if profile_dir in line.lower():
+                    # Extract PID (last CSV field)
+                    parts = line.strip().split(",")
+                    if parts:
+                        try:
+                            pid = int(parts[-1].strip())
+                            subprocess.run(
+                                ["taskkill", "/F", "/PID", str(pid)],
+                                capture_output=True, timeout=3
+                            )
+                            killed_chrome += 1
+                        except (ValueError, subprocess.TimeoutExpired):
+                            pass
+        except Exception:
+            # WMIC may not be available — fallback to killing all chrome
+            pass
+
+    if killed_chrome or killed_driver:
+        print(f"[cleanup] Killed stale processes: {killed_chrome} chrome, {killed_driver} chromedriver")
+        # Brief pause to let OS release file locks
+        time.sleep(1.5)
+    return killed_chrome + killed_driver
 
 
 class BrowserManager:
@@ -67,78 +123,79 @@ class BrowserManager:
 
         return opts
 
-    def _launch_browser(self):
-        """Launch Chrome/Edge with stealth patches."""
-        try:
-            opts = self._build_options()
+    def _apply_stealth(self):
+        """Apply CDP stealth patches to the driver."""
+        self.driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+            "source": """
+                Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+                Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5]});
+                Object.defineProperty(navigator, 'languages', {get: () => ['en-US', 'en']});
+                window.chrome = { runtime: {} };
+            """
+        })
 
+    def _try_launch(self, opts):
+        """Attempt to launch the browser with given options. Returns True on success."""
+        try:
             if config.BROWSER.lower() == "edge":
                 self.driver = webdriver.Edge(options=opts)
             else:
                 self.driver = webdriver.Chrome(options=opts)
 
             self.driver.implicitly_wait(config.IMPLICIT_WAIT)
+            self._apply_stealth()
 
-            # ── Stealth CDP patches ──
-            self.driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
-                "source": """
-                    Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
-                    Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5]});
-                    Object.defineProperty(navigator, 'languages', {get: () => ['en-US', 'en']});
-                    window.chrome = { runtime: {} };
-                """
-            })
-
-            # Minimize browser window — user should only see the web UI
             try:
                 self.driver.minimize_window()
             except Exception:
                 pass
 
-            # The first tab is the default blank tab
             self._tabs = {}
             self._active_provider = None
-            print(f"[+] Browser launched ({config.BROWSER}) — stealth mode, minimized, profile: {config.CHROME_PROFILE_DIR or 'temp'}")
+            return True
+        except WebDriverException:
+            self.driver = None
+            return False
 
-        except WebDriverException as e:
-            error_msg = str(e)
-            # Profile locked — retry without persistent profile
-            if "Chrome failed to start: crashed" in error_msg or "DevToolsActivePort" in error_msg:
-                print(f"[!] Profile locked, retrying without persistent profile...")
-                try:
-                    opts = self._build_options()
-                    # Remove user-data-dir argument
-                    opts._arguments = [a for a in opts._arguments if not a.startswith("--user-data-dir=")]
-                    if config.BROWSER.lower() == "edge":
-                        self.driver = webdriver.Edge(options=opts)
-                    else:
-                        self.driver = webdriver.Chrome(options=opts)
-                    self.driver.implicitly_wait(config.IMPLICIT_WAIT)
-                    self.driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
-                        "source": """
-                            Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
-                            Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5]});
-                            Object.defineProperty(navigator, 'languages', {get: () => ['en-US', 'en']});
-                            window.chrome = { runtime: {} };
-                        """
-                    })
-                    try:
-                        self.driver.minimize_window()
-                    except Exception:
-                        pass
-                    self._tabs = {}
-                    self._active_provider = None
-                    print(f"[+] Browser launched ({config.BROWSER}) — stealth mode, minimized, NO persistent profile (fallback)")
-                except WebDriverException as e2:
-                    print(f"[!] Failed to launch browser (fallback): {e2}")
-                    self.driver = None
-            else:
-                print(f"[!] Failed to launch browser: {e}")
-                self.driver = None
+    def _launch_browser(self):
+        """
+        Launch Chrome/Edge with stealth patches.
+        Strategy:
+          1. Try normal launch with persistent profile
+          2. If fails → kill stale processes → retry with profile
+          3. If still fails → retry without persistent profile (fallback)
+        """
+        opts = self._build_options()
+
+        # Attempt 1: Normal launch
+        if self._try_launch(opts):
+            print(f"[+] Browser launched ({config.BROWSER}) — stealth mode, minimized, profile: {config.CHROME_PROFILE_DIR or 'temp'}")
+            return
+
+        # Attempt 2: Kill stale processes and retry with profile
+        print("[!] Browser launch failed — killing stale processes and retrying...")
+        _kill_stale_browser_processes()
+
+        opts = self._build_options()
+        if self._try_launch(opts):
+            print(f"[+] Browser launched ({config.BROWSER}) — stealth mode, minimized, profile: {config.CHROME_PROFILE_DIR or 'temp'} (after cleanup)")
+            return
+
+        # Attempt 3: No persistent profile (last resort)
+        print("[!] Profile still locked — retrying without persistent profile...")
+        opts = self._build_options()
+        opts._arguments = [a for a in opts._arguments if not a.startswith("--user-data-dir=")]
+        if self._try_launch(opts):
+            print(f"[+] Browser launched ({config.BROWSER}) — stealth mode, minimized, NO persistent profile (fallback)")
+            return
+
+        print("[!] FATAL: Could not launch browser after 3 attempts.")
+        self.driver = None
 
     def restart(self):
-        """Kill browser and relaunch."""
+        """Kill browser and relaunch cleanly."""
         self.close_all()
+        _kill_stale_browser_processes()
         self._launch_browser()
 
     def close_all(self):
@@ -349,10 +406,31 @@ _manager_lock = threading.Lock()
 
 
 def get_browser_manager() -> BrowserManager:
-    """Thread-safe singleton accessor."""
+    """Thread-safe singleton accessor. Re-creates if previous browser died."""
     global _manager
+    if _manager is not None and not _manager.is_alive():
+        print("[!] Browser session dead — restarting...")
+        with _manager_lock:
+            if _manager is not None and not _manager.is_alive():
+                try:
+                    _manager.close_all()
+                except Exception:
+                    pass
+                _manager = None
     if _manager is None:
         with _manager_lock:
             if _manager is None:
                 _manager = BrowserManager()
     return _manager
+
+
+def reset_browser_manager():
+    """Force-reset the singleton (useful after crashes)."""
+    global _manager
+    with _manager_lock:
+        if _manager:
+            try:
+                _manager.close_all()
+            except Exception:
+                pass
+        _manager = None

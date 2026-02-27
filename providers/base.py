@@ -91,9 +91,13 @@ class BaseAutomator(ABC):
     def reconnect(self) -> None:
         """
         Re-open the tab for this provider.
-        BrowserManager handles the actual tab lifecycle.
+        If the browser is dead, triggers a full restart.
         """
-        self.browser_manager.close_tab(self.provider_name)
+        if not self.browser_manager.is_alive():
+            print(f"[{self.provider_name}] Browser dead — restarting...")
+            self.browser_manager.restart()
+        else:
+            self.browser_manager.close_tab(self.provider_name)
         self._in_conversation = False
         self._conversation_count = 0
 
