@@ -75,6 +75,19 @@ class BaseAutomator(ABC):
             "timing": {},
         }
 
+    def _wait_page_ready(self, driver, timeout: float = 5) -> bool:
+        """Wait until page reaches interactive or complete state."""
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            try:
+                state = driver.execute_script("return document.readyState")
+                if state in ("interactive", "complete"):
+                    return True
+            except Exception:
+                pass
+            time.sleep(0.1)
+        return False
+
     def reconnect(self) -> None:
         """
         Re-open the tab for this provider.

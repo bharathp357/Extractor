@@ -152,6 +152,68 @@ class BrowserManager:
         self._tabs.clear()
         self._active_provider = None
 
+    # ──────────────── Preloading ────────────────
+
+    def preload_tabs(self, providers_urls: list[tuple[str, str]]) -> dict:
+        """
+        Open all provider tabs with short page-load timeouts.
+        Chrome loads pages in parallel across tabs.
+        Returns: {provider_name: load_ms}
+        """
+        timings = {}
+        if not self.driver:
+            return timings
+
+        with self.lock:
+            for name, url in providers_urls:
+                if name in self._tabs:
+                    timings[name] = 0
+                    continue
+
+                t = time.perf_counter()
+                try:
+                    # First tab: reuse the blank initial tab
+                    if len(self._tabs) == 0:
+                        current = self.driver.current_url
+                        if current in ("about:blank", "data:,", "chrome://newtab/"):
+                            handle = self.driver.current_window_handle
+                            self._tabs[name] = handle
+                            self._active_provider = name
+                            self.driver.set_page_load_timeout(config.PRELOAD_TAB_TIMEOUT)
+                            try:
+                                self.driver.get(url)
+                            except Exception:
+                                pass  # Timeout OK — page keeps loading in background
+                            timings[name] = round((time.perf_counter() - t) * 1000)
+                            continue
+
+                    # Subsequent tabs
+                    self.driver.execute_script("window.open('');")
+                    handles = self.driver.window_handles
+                    new_handle = handles[-1]
+                    self.driver.switch_to.window(new_handle)
+                    self._tabs[name] = new_handle
+                    self._active_provider = name
+
+                    self.driver.set_page_load_timeout(config.PRELOAD_TAB_TIMEOUT)
+                    try:
+                        self.driver.get(url)
+                    except Exception:
+                        pass  # Timeout OK — parallel background load
+
+                except Exception as e:
+                    print(f"[!] Preload tab {name}: {e}")
+
+                timings[name] = round((time.perf_counter() - t) * 1000)
+
+            # Restore normal timeout
+            try:
+                self.driver.set_page_load_timeout(30)
+            except Exception:
+                pass
+
+        return timings
+
     # ──────────────── Tab Management ────────────────
 
     def open_tab(self, provider_name: str, url: str) -> bool:

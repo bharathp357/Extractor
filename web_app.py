@@ -4,7 +4,7 @@ Multi-provider Web UI: routes queries to Google AI Mode, Gemini Pro, or ChatGPT.
 """
 import threading
 from flask import Flask, render_template, request, jsonify
-from providers import get_automator, get_all_statuses, get_available_providers
+from providers import get_automator, get_all_statuses, get_available_providers, preload_all, get_preload_status
 from storage import get_storage
 import config
 
@@ -114,6 +114,12 @@ def api_provider_status(provider):
         return jsonify({"error": str(e)}), 400
 
 
+@app.route("/api/warmup", methods=["GET"])
+def api_warmup():
+    """Return preload/warmup status."""
+    return jsonify(get_preload_status())
+
+
 # ─────────────────────────── Providers ───────────────────────────
 
 @app.route("/api/providers", methods=["GET"])
@@ -208,4 +214,7 @@ def api_clear_session():
 # ─────────────────────────── Run ───────────────────────────
 
 def run_web_app():
+    if config.PRELOAD_ON_STARTUP:
+        _preload_thread = threading.Thread(target=preload_all, daemon=True, name="preloader")
+        _preload_thread.start()
     app.run(host=config.WEB_HOST, port=config.WEB_PORT, debug=False)

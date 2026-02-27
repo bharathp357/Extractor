@@ -42,5 +42,9 @@ MCP_PORT = 5051
 # === Persistent Chat State ===
 CHAT_URLS_FILE = os.path.join(BASE_DIR, ".chat_urls.json")  # Saves active chat URLs per provider
 
+# === Startup Preloading ===
+PRELOAD_ON_STARTUP = True         # Pre-launch browser + all tabs at startup
+PRELOAD_TAB_TIMEOUT = 4           # Max seconds per tab during preload (parallel loading)
+
 # Ensure directories exist
 os.makedirs(CONVERSATIONS_DIR, exist_ok=True)

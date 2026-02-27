@@ -6,9 +6,12 @@ Usage:
     google = get_automator("google")
     result = google.send_and_get_response("What is Docker?")
 """
+import json
 import threading
+import time as _time
 from providers.base import BaseAutomator
 from providers.browser_manager import get_browser_manager, BrowserManager
+import config
 
 
 # Provider name -> class mapping (lazy imports to avoid circular deps)
@@ -100,3 +103,90 @@ def _get_display_name(provider: str) -> str:
         "chatgpt": "ChatGPT",
     }
     return names.get(provider, provider.title())
+
+
+# ──────────────── Startup Preloading ────────────────
+
+_preload_status = {"state": "pending", "timings": {}}
+_preload_lock = threading.Lock()
+
+
+def _get_preload_urls() -> list[tuple[str, str]]:
+    """Get URLs for preloading, using saved chat URLs where available."""
+    urls = [
+        ("google", config.GOOGLE_URL),
+        ("gemini", config.GEMINI_URL),
+        ("chatgpt", config.CHATGPT_URL),
+    ]
+    try:
+        with open(config.CHAT_URLS_FILE, "r") as f:
+            saved = json.load(f)
+        urls = [
+            ("google", config.GOOGLE_URL),
+            ("gemini", saved.get("gemini") or config.GEMINI_URL),
+            ("chatgpt", saved.get("chatgpt") or config.CHATGPT_URL),
+        ]
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        pass
+    return urls
+
+
+def preload_all():
+    """Background preloader: launch browser + open all tabs + create automators."""
+    global _preload_status
+
+    with _preload_lock:
+        _preload_status["state"] = "loading"
+
+    t_start = _time.perf_counter()
+
+    try:
+        # Step 1: Launch browser
+        t_browser = _time.perf_counter()
+        bm = get_browser_manager()
+        browser_ms = round((_time.perf_counter() - t_browser) * 1000)
+        print(f"[preload] Browser launched in {browser_ms}ms")
+
+        # Step 2: Open all tabs (pages load in parallel in Chrome)
+        tab_urls = _get_preload_urls()
+        tab_timings = bm.preload_tabs(tab_urls)
+        print(f"[preload] Tabs opened: {tab_timings}")
+
+        # Step 3: Create all automator instances
+        t_auto = _time.perf_counter()
+        for name in _PROVIDER_CLASSES:
+            try:
+                auto = get_automator(name)
+                # If resuming a saved chat, mark as in-conversation
+                if hasattr(auto, '_chat_url') and auto._chat_url:
+                    auto._in_conversation = True
+            except Exception as e:
+                print(f"[preload] {name} automator failed: {e}")
+        auto_ms = round((_time.perf_counter() - t_auto) * 1000)
+
+        total_ms = round((_time.perf_counter() - t_start) * 1000)
+
+        with _preload_lock:
+            _preload_status = {
+                "state": "ready",
+                "timings": {
+                    "browser_ms": browser_ms,
+                    "tabs": tab_timings,
+                    "automators_ms": auto_ms,
+                    "total_ms": total_ms,
+                },
+            }
+
+        print(f"[preload] All ready in {total_ms}ms "
+              f"(browser={browser_ms}ms, tabs={tab_timings}, automators={auto_ms}ms)")
+
+    except Exception as e:
+        with _preload_lock:
+            _preload_status = {"state": "error", "error": str(e)}
+        print(f"[preload] Failed: {e}")
+
+
+def get_preload_status() -> dict:
+    """Get current preload state."""
+    with _preload_lock:
+        return dict(_preload_status)

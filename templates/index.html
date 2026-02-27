@@ -634,11 +634,35 @@
 
         // ── Init ──
         window.addEventListener('load', () => {
-            pollStatus();
+            checkWarmup();
             loadHistory();
-            setInterval(pollStatus, 15000);
             document.getElementById('input-google').focus();
         });
+
+        // ── Warmup polling ──
+        async function checkWarmup() {
+            try {
+                const res = await fetch('/api/warmup');
+                const data = await res.json();
+                if (data.state === 'loading') {
+                    toast('Warming up providers...', '');
+                    setTimeout(checkWarmup, 1000);
+                } else if (data.state === 'ready') {
+                    const ms = data.timings?.total_ms || '?';
+                    toast('All providers ready \u2014 ' + ms + 'ms', 'ok');
+                    pollStatus();
+                    setInterval(pollStatus, 15000);
+                } else if (data.state === 'error') {
+                    toast('Warmup failed', 'err');
+                    pollStatus();
+                    setInterval(pollStatus, 15000);
+                } else {
+                    setTimeout(checkWarmup, 500);
+                }
+            } catch {
+                setTimeout(checkWarmup, 500);
+            }
+        }
 
         // ── Provider switch ──
         function switchProvider(name) {

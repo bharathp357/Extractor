@@ -151,7 +151,7 @@ class ChatGPTAutomator(BaseAutomator):
                     # Use saved chat URL to resume previous conversation
                     start_url = self._chat_url or config.CHATGPT_URL
                     self.browser_manager.open_tab(self.provider_name, start_url)
-                    time.sleep(3)  # ChatGPT + Cloudflare can be slow
+                    self._wait_page_ready(driver, timeout=5)
                     if self._chat_url:
                         self._in_conversation = True
                         print(f"[chatgpt] Resuming saved chat: {self._chat_url}")

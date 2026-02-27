@@ -156,7 +156,7 @@ class GeminiProAutomator(BaseAutomator):
                     # Use saved chat URL to resume previous conversation
                     start_url = self._chat_url or config.GEMINI_URL
                     self.browser_manager.open_tab(self.provider_name, start_url)
-                    time.sleep(2)  # Let page load
+                    self._wait_page_ready(driver, timeout=5)
                     if self._chat_url:
                         self._in_conversation = True
                         print(f"[gemini] Resuming saved chat: {self._chat_url}")
