@@ -1,3 +1,14 @@
-# Google AI Mode Scraper - Dependencies
+# AI Command Center - Dependencies
+
+# Core
 flask>=3.0.0
+
+# Phase 1: Selenium/CDP automation
 selenium>=4.15.0
+
+# Phase 2: Undetectable OS-level automation
+pywinauto>=0.6.8
+pyautogui>=0.9.54
+pyperclip>=1.8.2
+numpy>=1.24.0
+Pillow>=10.0.0

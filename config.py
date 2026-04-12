@@ -42,6 +42,11 @@ MCP_PORT = 5051
 # === Persistent Chat State ===
 CHAT_URLS_FILE = os.path.join(BASE_DIR, ".chat_urls.json")  # Saves active chat URLs per provider
 
+# === Automation Mode ===
+# "phase1" = Selenium/CDP DOM scraping (original)
+# "phase2" = PyWinAuto + PyAutoGUI OS-level automation (undetectable)
+AUTOMATION_MODE = "phase2"
+
 # === Startup Preloading ===
 PRELOAD_ON_STARTUP = True         # Pre-launch browser + all tabs at startup
 PRELOAD_TAB_TIMEOUT = 4           # Max seconds per tab during preload (parallel loading)

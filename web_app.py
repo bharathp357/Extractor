@@ -155,17 +155,72 @@ def api_reconnect():
 
 @app.route("/api/debug/dom", methods=["POST"])
 def api_debug_dom():
-    """Debug endpoint: run JS in a provider's tab and return result."""
+    """Debug endpoint: dump UIA tree info for a provider's tab."""
     data = request.get_json() or {}
     provider = data.get("provider", "gemini")
-    js = data.get("js", "return document.title;")
 
     try:
         automator = get_automator(provider)
-        with automator.browser_manager.lock:
-            automator.browser_manager.switch_to(provider)
-            result = automator.browser_manager.driver.execute_script(js)
-        return jsonify({"result": result})
+        wm = automator.window_manager
+
+        with wm.lock:
+            wm.switch_to(provider)
+            import time as _t
+            _t.sleep(0.5)
+
+            result = {"provider": provider, "title": wm.get_title()}
+
+            # Get UIA window
+            window = wm.get_uia_window()
+            if not window:
+                result["error"] = "No UIA window"
+                return jsonify(result)
+
+            # Find Document
+            docs = window.descendants(control_type="Document")
+            result["document_count"] = len(docs)
+
+            if docs:
+                doc = docs[0]
+                result["doc_name"] = doc.element_info.name or ""
+
+                # Get all Edit controls in the document
+                edits = doc.descendants(control_type="Edit")
+                result["edits"] = []
+                for e in edits:
+                    try:
+                        name = e.element_info.name or ""
+                        rect = e.rectangle()
+                        result["edits"].append({
+                            "name": name[:80],
+                            "rect": f"({rect.left},{rect.top},{rect.right},{rect.bottom})",
+                        })
+                    except Exception:
+                        pass
+
+                # Get all Text fragments (first 30)
+                texts = doc.descendants(control_type="Text")
+                result["text_count"] = len(texts)
+                result["texts"] = []
+                for t in texts[:30]:
+                    try:
+                        name = t.element_info.name
+                        if name and name.strip():
+                            result["texts"].append(name.strip()[:100])
+                    except Exception:
+                        pass
+
+                # Get all Buttons in the document
+                buttons = doc.descendants(control_type="Button")
+                result["buttons"] = []
+                for b in buttons[:15]:
+                    try:
+                        name = b.element_info.name or ""
+                        result["buttons"].append(name[:50])
+                    except Exception:
+                        pass
+
+            return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
